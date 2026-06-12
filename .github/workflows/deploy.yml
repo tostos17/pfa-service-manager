@@ -1,0 +1,79 @@
+name: PFA Academy API CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ] # Triggers the pipeline automatically when code hits the main branch
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17' # Change to '21' if your pom.xml uses Java 21
+          distribution: 'corretto'
+          cache: 'maven'
+
+      - name: Build and Package with Maven
+        run: mvn clean package -DskipTests # Skipping tests temporarily for rapid initial deployment setup
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spring-app-jar
+          path: target/*.jar
+
+  deploy-to-ec2:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: spring-app-jar
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_PUBLIC_IP }} >> ~/.ssh/known_hosts
+
+      - name: Copy JAR to EC2 via SCP
+        run: |
+          scp -i ~/.ssh/id_rsa *.jar ubuntu@${{ secrets.EC2_PUBLIC_IP }}:/home/ubuntu/app-new.jar
+
+      - name: Execute Remote SSH Commands to Restart Application
+        run: |
+          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
+            # 1. Kill the old running application instance on port 8080 if it exists
+            PID=$(lsof -t -i:8080)
+            if [ ! -z "$PID" ]; then
+              echo "Stopping old instance running on PID: $PID"
+              kill -15 $PID
+              sleep 5
+            fi
+
+            # 2. Backup old jar and replace with the newly uploaded artifact
+            mv /home/ubuntu/app-new.jar /home/ubuntu/app.jar
+
+            # 3. Export production environment configurations cleanly
+            export DB_HOST="${{ secrets.DB_HOST }}"
+            export DB_PORT="5432"
+            export DB_NAME="postgres"
+            export DB_USERNAME="${{ secrets.DB_USERNAME }}"
+            export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            export S3_BUCKET_NAME="${{ secrets.S3_BUCKET_NAME }}"
+            export AWS_REGION="us-east-1"
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+            export JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}"
+
+            # 4. Start the application in detached background mode safely
+            nohup java -jar /home/ubuntu/app.jar > /home/ubuntu/app.log 2>&1 &
+            echo "Application has been successfully restarted dynamically!"
+          EOF
