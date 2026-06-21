@@ -2,7 +2,7 @@ name: PFA Academy API CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ] # Triggers the pipeline automatically when code hits the main branch
+    branches: [ "master" ] # Triggers the pipeline automatically when code hits the main branch
 
 jobs:
   build-and-test:
