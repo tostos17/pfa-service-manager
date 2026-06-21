@@ -1,0 +1,59 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://db-env-test.cx20a6iisbey.eu-north-1.rds.amazonaws.com/postgres
+#    url: jdbc:postgresql://192.168.100.39/postgres
+#    username: admin
+    username: ${{ DB_USERNAME }}
+    password: ${{ DB_PASSWORD }}
+    hikari:
+      maximum-pool-size: 5
+      idle-timeout: 30000
+      connection-timeout: 20000
+  servlet:
+    multipart:
+    max-file-size: 100MB
+    max-request-size: 100MB
+
+  # Flyway configuration
+  flyway:
+    clean-disabled: true
+
+  # Let Flyway manage the schema, Hibernate should just validate it
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+# AWS S3 Configuration Settings
+aws:
+  s3:
+    bucket-name: pfa-player-photo
+    region: eu-north-1
+    access-key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    secret-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+logbook:
+  filter:
+    path: /api/v1/** # Intercept our academy core API paths
+  format:
+    style: json            # Highly recommended for externalized log files (easy to parse with ELK/Splunk)
+  obfuscate:
+    headers:
+      - Authorization      # Mask JWT security tokens automatically
+      - Cookie
+    parameters:
+      - password           # Mask plain text registration parameters
+      - token
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus

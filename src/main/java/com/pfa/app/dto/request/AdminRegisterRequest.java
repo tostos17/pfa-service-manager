@@ -30,6 +30,4 @@ public class AdminRegisterRequest {
     @Email(message = "Invalid email format")
     private String email;
 
-    @NotBlank(message = "Employee ID is required")
-    private String employeeId;
 }

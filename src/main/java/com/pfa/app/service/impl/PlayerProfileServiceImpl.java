@@ -26,7 +26,7 @@ public class PlayerProfileServiceImpl implements PlayerProfileService {
                 .orElseThrow(() -> new IllegalArgumentException("Player not found with ID: " + playerId));
 
         // Look up profile, or create a brand new one if it doesn't exist yet
-        PlayerProfile profile = profileRepository.findByPlayerDataPlayerId(playerId)
+        PlayerProfile profile = profileRepository.findByPlayerPlayerId(playerId)
                 .orElse(new PlayerProfile());
 
         profile.setPlayer(playerData);
@@ -44,7 +44,7 @@ public class PlayerProfileServiceImpl implements PlayerProfileService {
     @Override
     @Transactional(readOnly = true)
     public PlayerProfileResponse getProfileByPlayerId(String playerId) {
-        PlayerProfile profile = profileRepository.findByPlayerDataPlayerId(playerId)
+        PlayerProfile profile = profileRepository.findByPlayerPlayerId(playerId)
                 .orElseThrow(() -> new IllegalArgumentException("Metrics profile not initialized yet for player ID: " + playerId));
         return mapToResponse(profile);
     }

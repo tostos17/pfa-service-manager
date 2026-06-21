@@ -37,4 +37,8 @@ public class PlayerProfile {
     @MapsId
     @JoinColumn(name = "player_id")
     private Player player;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id", nullable = true)
+    private Category category;
 }

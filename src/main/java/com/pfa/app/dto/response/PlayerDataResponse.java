@@ -16,8 +16,7 @@ public class PlayerDataResponse {
     private String email;
     private String phone;
     private LocalDate dateOfBirth;
-    private String position;
-    private Integer jerseyNumber;
+    private String parent;
     private boolean healthy;
     private String healthConcernDescription;
     private String passportUrl; // Absolute S3 URL link for rendering on the client

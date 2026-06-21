@@ -67,4 +67,10 @@ public class Player {
 
     @OneToOne(mappedBy = "player", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private PlayerProfile playerProfile;
+
+    @OneToOne(mappedBy = "player", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Account account;
+
+    @Column(name = "registration_date", nullable = false)
+    private LocalDate registrationDate;
 }

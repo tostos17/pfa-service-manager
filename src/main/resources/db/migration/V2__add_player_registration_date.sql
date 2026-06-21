@@ -1,0 +1,3 @@
+
+ALTER TABLE players
+ADD COLUMN registration_date DATE NOT NULL DEFAULT CURRENT_DATE;

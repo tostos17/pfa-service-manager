@@ -48,7 +48,7 @@ public class PlayerRegisterRequest {
     @NotNull(message = "Country is required")
     private String country;
 
-    @NotNull(message = "Date of birth is required")
+    @NotNull(message = "Health status is required")
     @Pattern(regexp = "^(TRUE|FALSE)")
     private String healthy;
 

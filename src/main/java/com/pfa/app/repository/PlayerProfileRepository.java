@@ -6,5 +6,5 @@ import java.util.Optional;
 
 public interface PlayerProfileRepository extends JpaRepository<PlayerProfile, Long> {
     // Traverse relationship: PlayerProfile -> PlayerData -> PlayerId (UUID string)
-    Optional<PlayerProfile> findByPlayerDataPlayerId(String playerId);
+    Optional<PlayerProfile> findByPlayerPlayerId(String playerId);
 }

@@ -1,10 +1,16 @@
 package com.pfa.app.service.impl;
 
+import com.pfa.app.dto.response.ApiResponse;
+import com.pfa.app.dto.response.ParentResponseDto;
 import com.pfa.app.dto.response.PlayerDataResponse;
+import com.pfa.app.model.Parent;
 import com.pfa.app.model.Player;
+import com.pfa.app.repository.ParentRepository;
 import com.pfa.app.repository.PlayerRepository;
 import com.pfa.app.service.ParentProfileService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +22,7 @@ import java.util.stream.Collectors;
 public class ParentProfileServiceImpl implements ParentProfileService {
 
     private final PlayerRepository playerRepository;
+    private final ParentRepository parentRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -36,5 +43,11 @@ public class ParentProfileServiceImpl implements ParentProfileService {
                         .passportUrl(player.getPassportUrl())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public ApiResponse<Page<ParentResponseDto>> getParents(Pageable pageable) {
+
+        return ApiResponse.ok(parentRepository.findAllParentsAsDto(pageable));
     }
 }

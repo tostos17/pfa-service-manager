@@ -1,6 +1,7 @@
 package com.pfa.app.exception;
 
 import com.pfa.app.dto.exception.ErrorResponse;
+import com.pfa.app.dto.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -86,7 +87,39 @@ public class GlobalExceptionHandler {
                 .path(request.getRequestURI())
                 .build();
 
+        ex.printStackTrace();
+
         // Note: In production, log the actual 'ex' stacktrace here using an SLF4J logger
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    // 5. Handle Access Denied / Authorization Failures
+    @ExceptionHandler({
+            org.springframework.security.authorization.AuthorizationDeniedException.class,
+            org.springframework.security.access.AccessDeniedException.class
+    })
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(
+            Exception ex, HttpServletRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.FORBIDDEN.value())
+                .error(HttpStatus.FORBIDDEN.getReasonPhrase())
+                .message("Access denied: You do not have permission to access this resource")
+                .timestamp(LocalDateTime.now())
+                .path(request.getRequestURI())
+                .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
+    }
+
+    // . Handle ApiException
+    @ExceptionHandler({
+            com.pfa.app.exception.ApiException.class
+    })
+    public ApiResponse<String> handleAiException(
+            Exception ex, HttpServletRequest request) {
+
+        ApiException ex1 = (ApiException) ex;
+        return ApiResponse.generic(null, ex.getMessage(), false, ex1.getCode());
     }
 }

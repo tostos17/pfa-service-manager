@@ -1,10 +1,14 @@
 package com.pfa.app.service.impl;
 
+import com.pfa.app.dto.response.ApiResponse;
+import com.pfa.app.dto.response.PlayerDataResponse;
 import com.pfa.app.model.Player;
 import com.pfa.app.repository.PlayerRepository;
 import com.pfa.app.service.FileService;
 import com.pfa.app.service.PlayerDataService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,5 +37,26 @@ public class PlayerDataServiceImpl implements PlayerDataService {
         playerRepository.save(player);
 
         return newPassportUrl;
+    }
+
+    @Override
+    public ApiResponse<Page<PlayerDataResponse>> getPlayers(Pageable pageable) {
+        Page<Player> playersPage = playerRepository.findAll(pageable);
+
+        return ApiResponse.ok(
+                playersPage.map(player -> new PlayerDataResponse(
+                        player.getPlayerId(),
+                        player.getFirstName(),
+                        player.getMiddleName(),
+                        player.getLastName(),
+                        player.getEmail(),
+                        player.getPhone(),
+                        player.getDateOfBirth(),
+                        player.getParent() != null ? player.getParent().getFirstName() + " " + player.getParent().getLastName() : null,
+                        player.isHealthy(),
+                        player.getHealthConcernDescription(),
+                        player.getPassportUrl()
+                ))
+        );
     }
 }

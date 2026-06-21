@@ -1,5 +1,6 @@
 package com.pfa.app.security;
 
+import com.pfa.app.model.User; 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -47,6 +48,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
                 if (jwtService.isTokenValid(jwt, userDetails)) {
+
+                    // --- First Time Login Check Start ---
+                    // Cast directly to your domain entity class layout
+                    if (userDetails instanceof User user) {
+                        if (user.isRequirePasswordChange()) {
+                            String requestURI = request.getRequestURI();
+
+                            // If they are attempting to reach anything other than the update endpoint, intercept
+                            if (!requestURI.equals("/api/auth/force-change-password")) {
+                                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                                response.setContentType("application/json");
+                                response.getWriter().write(
+                                        "{\"error\": \"PASSWORD_CHANGE_REQUIRED\", \"message\": \"First-time login detected. You must change your default password to proceed.\"}"
+                                );
+                                return; // Block any further filter chain execution
+                            }
+                        }
+                    }
+                    // --- First Time Login Check End ---
+
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,
@@ -57,7 +78,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception e) {
-            // Token parsing anomalies or expiration could be intercepted elegantly here
+            // Token parsing anomalies or expiration can be caught cleanly here
         }
 
         filterChain.doFilter(request, response);

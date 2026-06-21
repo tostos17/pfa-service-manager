@@ -1,14 +1,16 @@
 package com.pfa.app.service;
 
-import com.pfa.app.dto.ParentRegisterRequest;
 import com.pfa.app.dto.request.*;
 import com.pfa.app.dto.response.AuthResponse;
+import com.pfa.app.exception.ApiException;
 import com.pfa.app.model.*;
 import com.pfa.app.repository.ParentRepository;
 import com.pfa.app.repository.RoleRepository;
 import com.pfa.app.repository.UserRepository;
 import com.pfa.app.security.JwtService;
+import com.pfa.app.service.impl.AdminIdentifierService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,12 +20,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -34,6 +41,7 @@ public class AuthService {
     private final FileService fileService;
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
+    private final AdminIdentifierService adminIdentifierService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -50,6 +58,7 @@ public class AuthService {
 
             Role role = roleRepository.findByName(formattedName)
                     .orElseThrow(() -> new IllegalArgumentException("Role not found in system: " + roleName));
+            log.info("Role found: {}", roleName);
             assignedRoles.add(role);
         }
 
@@ -123,7 +132,8 @@ public class AuthService {
 
     @Transactional
     public AuthResponse registerPlayer(PlayerRegisterRequest request, MultipartFile passportPhoto) {
-        // 1. Fail-fast validations before touching S3 or generating IDs
+        validateHealthEntries(request.getHealthy(), request.getHealthConcernDescription());
+        // 1. Fail-fast validation checks
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {
             throw new IllegalArgumentException("Username is already taken");
         }
@@ -134,29 +144,26 @@ public class AuthService {
         Parent linkedParent = null;
         if (request.getParentId() != null) {
             linkedParent = parentRepository.findById(request.getParentId())
-                    .orElseThrow(() -> new IllegalArgumentException("Registration failed: Parent not found with ID " + request.getParentId()));
+                    .orElseThrow(() -> new IllegalArgumentException("Parent profile not found"));
         }
 
-        // 2. Generate the unique business ID upfront
+        // 2. Generate unique identifiers safely
         String uniquePlayerId = UUID.randomUUID().toString();
-
-        // 3. Pass the uniquePlayerId to S3 instead of username.
-        // If the DB save fails, you know exactly which ID to clean up in S3 if needed.
         String uploadedUrl = null;
         if (passportPhoto != null && !passportPhoto.isEmpty()) {
             uploadedUrl = fileService.uploadPlayerPassport(passportPhoto, uniquePlayerId);
         }
 
-        // 4. Build Security User Context
+        // 3. Build authorization user core
         User user = User.builder()
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .roles(Set.of(playerRole))
                 .build();
 
-        // 5. Build Business Profile Context
+        // 4. Build PlayerData core
         Player player = Player.builder()
-                .playerId(uniquePlayerId) // Securely assigned
+                .playerId(uniquePlayerId)
                 .firstName(request.getFirstName())
                 .middleName(request.getMiddleName())
                 .lastName(request.getLastName())
@@ -171,16 +178,54 @@ public class AuthService {
                 .passportUrl(uploadedUrl)
                 .parent(linkedParent)
                 .user(user)
+                .registrationDate(LocalDate.now(ZoneId.of("Africa/Lagos")))
                 .build();
 
+        // REQUIREMENT 1: Instantiate blank/default performance profile layer
+        PlayerProfile initialProfile = PlayerProfile.builder()
+                .heightCm(0.0)
+                .weightKg(0.0)
+                .dominantFoot("PENDING")
+                .position("UNASSIGNED")
+                .player(player)
+                .build();
+
+        player.setPlayerProfile(initialProfile);
+
+        // REQUIREMENT 2: Generate unique name-reflective Account string & Account entry
+        // Format Example: PFA-SMITH-J-2026-A1B2
+        String shortRandom = UUID.randomUUID().toString().substring(0, 4).toUpperCase();
+        String firstInitial = player.getFirstName().substring(0, 1).toUpperCase();
+        String cleanedLastName = player.getLastName().replaceAll("\\s+", "").toUpperCase();
+        int currentYear = java.time.Year.now().getValue();
+
+        String personalizedAccountId = String.format("PFA-%s-%s-%d-%s", cleanedLastName, firstInitial, currentYear, shortRandom);
+
+        Account initialAccount = Account.builder()
+                .accountId(personalizedAccountId)
+                .status(true)
+                .currentPending(BigDecimal.ZERO)
+                .outstandings(BigDecimal.ZERO)
+                .player(player)
+                .build();
+
+        player.setAccount(initialAccount);
+
+        // 5. Save the root entity. CascadeType.ALL propagates and saves the Profile and Account
         user.setPlayer(player);
-        userRepository.save(user); // Triggers transactional database commit
+        userRepository.save(user);
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
         return AuthResponse.builder()
                 .token(jwtService.generateToken(userDetails))
                 .username(user.getUsername())
                 .build();
+    }
+
+    private void validateHealthEntries(String healthy, String healthConcernDescription) {
+        if(healthy.equalsIgnoreCase("false") && (healthConcernDescription == null || healthConcernDescription.isEmpty())) {
+            throw new ApiException("Kindly describe the player's health concerns", 400);
+        }
     }
 
     @Transactional
@@ -202,7 +247,7 @@ public class AuthService {
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .email(request.getEmail())
-                .employeeId(request.getEmployeeId())
+                .employeeId(adminIdentifierService.generateAdminEmployeeId())
                 .user(user)
                 .build();
 

@@ -3,6 +3,8 @@ package com.pfa.app.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.ZoneId;
+
 @Entity
 @Table(name = "parents")
 @Getter
@@ -33,8 +35,16 @@ public class Parent {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String address;
 
+    @Column(name = "registration_date", nullable = false, updatable = false)
+    private java.time.LocalDateTime registrationDate;
+
     @OneToOne(fetch = FetchType.LAZY)
     @MapsId // Specifies that the parent's ID is derived from the user association
     @JoinColumn(name = "user_id")
     private User user;
+
+    @PrePersist
+    protected void onCreate() {
+        this.registrationDate = java.time.LocalDateTime.now(ZoneId.of("Africa/Lagos"));
+    }
 }
