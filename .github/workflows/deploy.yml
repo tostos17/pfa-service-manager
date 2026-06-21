@@ -45,7 +45,7 @@ jobs:
 
       - name: Copy JAR to EC2 via SCP
         run: |
-          scp -i ~/.ssh/id_rsa *.jar ubuntu@${{ secrets.EC2_PUBLIC_IP }}:/home/ubuntu/app-new.jar
+          scp -i ~/.ssh/id_rsa *.jar ec2-user@${{ secrets.EC2_PUBLIC_IP }}:/home/ubuntu/app-new.jar
 
       - name: Execute Remote SSH Commands to Restart Application
         run: |
