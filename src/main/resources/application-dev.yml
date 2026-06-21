@@ -3,8 +3,8 @@ spring:
     url: jdbc:postgresql://db-env-test.cx20a6iisbey.eu-north-1.rds.amazonaws.com/postgres
 #    url: jdbc:postgresql://192.168.100.39/postgres
 #    username: admin
-    username: ${{ DB_USERNAME }}
-    password: ${{ DB_PASSWORD }}
+    username: ${ DB_USERNAME }
+    password: ${ DB_PASSWORD }
     hikari:
       maximum-pool-size: 5
       idle-timeout: 30000
