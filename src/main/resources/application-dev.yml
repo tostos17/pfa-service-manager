@@ -30,8 +30,8 @@ aws:
   s3:
     bucket-name: pfa-player-photo
     region: eu-north-1
-    access-key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-    secret-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    access-key: ${AWS_ACCESS_KEY_ID}
+    secret-key: ${AWS_SECRET_ACCESS_KEY}
 
 logbook:
   filter:
