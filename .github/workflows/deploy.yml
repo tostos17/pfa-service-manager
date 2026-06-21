@@ -39,17 +39,22 @@ jobs:
       - name: Setup SSH Key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          # Using cat to preserve line breaks in the PEM key to avoid libcrypto errors
+          cat << 'EOF_KEY' > ~/.ssh/id_rsa
+          ${{ secrets.EC2_SSH_KEY }}
+          EOF_KEY
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_PUBLIC_IP }} >> ~/.ssh/known_hosts
 
       - name: Copy JAR to EC2 via SCP
+        # Updated target directory to /home/ec2-user/
         run: |
-          scp -i ~/.ssh/id_rsa *.jar ec2-user@${{ secrets.EC2_PUBLIC_IP }}:/home/ubuntu/app-new.jar
+          scp -i ~/.ssh/id_rsa *.jar ec2-user@${{ secrets.EC2_PUBLIC_IP }}:/home/ec2-user/app-new.jar
 
       - name: Execute Remote SSH Commands to Restart Application
+        # Updated the ssh login to use ec2-user
         run: |
-          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
+          ssh -i ~/.ssh/id_rsa ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
             # 1. Kill the old running application instance on port 8080 if it exists
             PID=$(lsof -t -i:8080)
             if [ ! -z "$PID" ]; then
@@ -57,10 +62,11 @@ jobs:
               kill -15 $PID
               sleep 5
             fi
-
+          
             # 2. Backup old jar and replace with the newly uploaded artifact
-            mv /home/ubuntu/app-new.jar /home/ubuntu/app.jar
-
+            # Updated paths to /home/ec2-user/
+            mv /home/ec2-user/app-new.jar /home/ec2-user/app.jar
+          
             # 3. Export production environment configurations cleanly
             export DB_HOST="${{ secrets.DB_HOST }}"
             export DB_PORT="5432"
@@ -72,8 +78,9 @@ jobs:
             export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}"
             export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}"
             export JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}"
-
+          
             # 4. Start the application in detached background mode safely
-            nohup java -jar /home/ubuntu/app.jar > /home/ubuntu/app.log 2>&1 &
+            # Updated paths to /home/ec2-user/
+            nohup java -jar /home/ec2-user/app.jar > /home/ec2-user/app.log 2>&1 &
             echo "Application has been successfully restarted dynamically!"
           EOF
