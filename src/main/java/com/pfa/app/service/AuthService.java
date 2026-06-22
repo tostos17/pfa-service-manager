@@ -11,6 +11,7 @@ import com.pfa.app.security.JwtService;
 import com.pfa.app.service.impl.AdminIdentifierService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -42,6 +43,9 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final AdminIdentifierService adminIdentifierService;
+
+    @Value("${default.starter}")
+    private String defaultPass;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -92,9 +96,12 @@ public class AuthService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
         String jwtToken = jwtService.generateToken(userDetails);
 
+        User user = userRepository.findByUsername(request.getUsername()).orElseThrow();
+
         return AuthResponse.builder()
                 .token(jwtToken)
                 .username(userDetails.getUsername())
+                .requirePasswordChange(user.isRequirePasswordChange())
                 .build();
     }
 
@@ -109,7 +116,7 @@ public class AuthService {
 
         User user = User.builder()
                 .username(request.getUsername())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .password(passwordEncoder.encode(defaultPass))
                 .roles(Set.of(coachRole))
                 .build();
 
@@ -157,7 +164,7 @@ public class AuthService {
         // 3. Build authorization user core
         User user = User.builder()
                 .username(request.getUsername())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .password(passwordEncoder.encode(defaultPass))
                 .roles(Set.of(playerRole))
                 .requirePasswordChange(true)
                 .build();
@@ -240,7 +247,7 @@ public class AuthService {
 
         User user = User.builder()
                 .username(request.getUsername())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .password(passwordEncoder.encode(defaultPass))
                 .roles(Set.of(adminRole))
                 .build();
 
@@ -273,7 +280,7 @@ public class AuthService {
         // 3. Construct core security User context
         User user = User.builder()
                 .username(request.getUsername())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .password(passwordEncoder.encode(defaultPass))
                 .roles(Set.of(parentRole))
                 .build();
 

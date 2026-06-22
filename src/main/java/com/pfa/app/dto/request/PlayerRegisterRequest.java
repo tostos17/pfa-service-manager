@@ -19,8 +19,6 @@ public class PlayerRegisterRequest {
     @Size(min = 4, max = 50)
     private String username;
 
-    @NotBlank(message = "Password is required")
-    @Size(min = 6, max = 100)
     private String password;
 
     @NotBlank(message = "First name is required")
