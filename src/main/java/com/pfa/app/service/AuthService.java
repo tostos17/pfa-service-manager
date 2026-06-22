@@ -159,6 +159,7 @@ public class AuthService {
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .roles(Set.of(playerRole))
+                .requirePasswordChange(true)
                 .build();
 
         // 4. Build PlayerData core
