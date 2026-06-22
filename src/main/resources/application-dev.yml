@@ -57,3 +57,6 @@ management:
     web:
       exposure:
         include: health, info, prometheus
+
+default:
+  starter: Access123
