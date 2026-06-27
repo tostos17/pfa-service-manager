@@ -1,5 +1,6 @@
 package com.pfa.app.model;
 
+import com.pfa.app.enums.Category;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -38,7 +39,5 @@ public class PlayerProfile {
     @JoinColumn(name = "player_id")
     private Player player;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", nullable = true)
-    private Category category;
+    private String category;
 }

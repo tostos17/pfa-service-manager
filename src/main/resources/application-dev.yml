@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://db-env-test.cx20a6iisbey.eu-north-1.rds.amazonaws.com/postgres
+    url: ${DB_URL}
 #    url: jdbc:postgresql://192.168.100.39/postgres
 #    username: admin
     username: ${DB_USERNAME}
@@ -57,6 +57,11 @@ management:
     web:
       exposure:
         include: health, info, prometheus
+
+app:
+  cors:
+    allowed-origins: http://localhost:5173,http://localhost:3000
+
 
 default:
   starter: Access123
